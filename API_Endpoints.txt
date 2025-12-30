@@ -1,0 +1,106 @@
+停车场管理系统 API 接口文档
+Parking Management System API Documentation
+
+========================================
+系统管理接口 System Management APIs
+========================================
+
+GET    /api/health    健康检查 - 检查服务状态
+GET    /api/info      获取API信息 - 获取API版本和端点信息
+
+========================================
+车辆管理接口 Vehicle Management APIs
+========================================
+
+POST   /api/cars                    车辆注册 - 注册新车辆
+GET    /api/cars/:plate             获取车辆信息 - 根据车牌号获取车辆详情
+GET    /api/cars                    获取所有车辆 - 获取车辆列表
+GET    /api/cars/type/:type         按类型获取车辆 - 根据车辆类型筛选车辆
+PUT    /api/cars/:plate             更新车辆信息 - 更新指定车辆的信息
+DELETE /api/cars/:plate             删除车辆 - 删除指定车辆
+GET    /api/cars/statistics/overview 车辆统计 - 获取车辆统计概览
+
+========================================
+停车位管理接口 Parking Space Management APIs
+========================================
+
+POST   /api/spaces                        添加停车位 - 创建新停车位
+GET    /api/spaces/:id                    获取停车位信息 - 根据ID获取停车位详情
+GET    /api/spaces                        获取所有停车位 - 获取停车位列表
+GET    /api/spaces/status/:status         按状态获取停车位 - 根据状态筛选停车位
+GET    /api/spaces/available              获取可用停车位 - 获取当前可用的停车位
+GET    /api/spaces/occupied               获取已占用停车位 - 获取当前占用的停车位
+PUT    /api/spaces/:id                    更新停车位信息 - 更新指定停车位的信息
+DELETE /api/spaces/:id                    删除停车位 - 删除指定停车位
+POST   /api/spaces/:id/occupy             占用停车位 - 占用指定停车位
+POST   /api/spaces/:id/release            释放停车位 - 释放指定停车位
+PUT    /api/spaces/:id/status             更新停车位状态 - 更新停车位状态
+GET    /api/spaces/calculate-fee          计算停车费用 - 计算停车费用
+GET    /api/spaces/statistics/overview      停车位统计 - 获取停车位统计概览
+GET    /api/spaces/statistics/usage       停车位使用率统计 - 获取停车位使用率统计
+
+========================================
+报告统计接口 Report & Statistics APIs
+========================================
+
+GET    /api/reports/revenue               收入报告 - 获取收入统计报告
+GET    /api/reports/parking               停车统计报告 - 获取停车统计报告
+GET    /api/reports/payment               支付统计报告 - 获取支付统计报告
+GET    /api/reports/space-usage           空间使用率报告 - 获取空间使用率报告
+GET    /api/reports/occupancy-rate        占用率报告 - 获取停车位占用率报告
+GET    /api/reports/car-statistics        车辆统计报告 - 获取车辆统计报告
+GET    /api/reports/car-type-distribution 车辆类型分布报告 - 获取车辆类型分布报告
+GET    /api/reports/unpaid                欠费报告 - 获取欠费统计报告
+GET    /api/reports/overdue               逾期报告 - 获取逾期统计报告
+GET    /api/reports/dashboard             仪表板摘要 - 获取仪表板摘要信息
+GET    /api/reports/detailed              详细报告 - 获取详细统计报告
+
+========================================
+接口说明 API Notes
+========================================
+
+- 所有接口返回JSON格式数据
+- 状态码说明：
+  * 200: 成功
+  * 400: 请求参数错误
+  * 404: 资源未找到
+  * 500: 服务器内部错误
+- 时间格式：ISO 8601格式 (YYYY-MM-DDTHH:MM:SS)
+- 货币单位：人民币元
+- 分页参数：page, limit (默认每页20条)
+
+========================================
+参数说明 Parameter Notes
+========================================
+
+路径参数 Path Parameters:
+- :plate   - 车牌号 (例如: 京A12345)
+- :id      - 停车位ID (数字)
+- :type    - 车辆类型 (小型车, 大型车, 摩托车等)
+- :status  - 停车位状态 (空闲, 占用, 维修等)
+
+查询参数 Query Parameters:
+- page     - 页码 (默认1)
+- limit    - 每页数量 (默认20)
+- start_date - 开始日期 (YYYY-MM-DD)
+- end_date   - 结束日期 (YYYY-MM-DD)
+- space_type - 停车位类型 (普通, VIP, 临时)
+
+========================================
+错误处理 Error Handling
+========================================
+
+所有接口在发生错误时返回统一的错误格式：
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "错误描述",
+    "details": "详细错误信息"
+  }
+}
+
+常见错误代码：
+- INVALID_PARAMETER: 参数无效
+- RESOURCE_NOT_FOUND: 资源未找到
+- DATABASE_ERROR: 数据库错误
+- INTERNAL_ERROR: 内部服务器错误

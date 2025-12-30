@@ -1,0 +1,655 @@
+停车场管理系统 API 接口文档
+Parking Management System API Documentation
+
+========================================
+系统管理接口 System Management APIs
+========================================
+
+GET /api/health
+功能: 健康检查 - 检查服务状态
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "status": "healthy",
+    "timestamp": "2024-01-01T12:00:00",
+    "version": "1.0.0"
+  }
+}
+
+GET /api/info
+功能: 获取API信息 - 获取API版本和端点信息
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "name": "Parking Management System API",
+    "version": "1.0.0",
+    "endpoints": ["/api/health", "/api/cars", "/api/spaces", "/api/reports"]
+  }
+}
+
+========================================
+车辆管理接口 Vehicle Management APIs
+========================================
+
+POST /api/cars
+功能: 车辆注册 - 注册新车辆
+请求参数:
+{
+  "plate": "京A12345",      // 必填, 车牌号
+  "type": "小型车",         // 可选,车辆类型
+  "color": "白色"           // 可选, 车辆颜色
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "plate": "京A12345",
+    "type": "小型车",
+    "color": "白色",
+    "createTime": "2024-01-01T12:00:00",
+    "updateTime": "2024-01-01T12:00:00"
+  }
+}
+
+GET /api/cars/:plate
+功能: 获取车辆信息 - 根据车牌号获取车辆详情
+路径参数: :plate - 车牌号 (例如: 京A12345)
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "plate": "京A12345",
+    "type": "小型车",
+    "color": "白色",
+    "createTime": "2024-01-01T12:00:00",
+    "updateTime": "2024-01-01T12:00:00"
+  }
+}
+
+GET /api/cars
+功能: 获取所有车辆 - 获取车辆列表
+请求参数:
+- page (可选): 页码, 默认1
+- limit (可选): 每页数量, 默认20
+- type (可选): 车辆类型筛选
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "cars": [
+      {
+        "plate": "京A12345",
+        "type": "小型车",
+        "color": "白色",
+        "createTime": "2024-01-01T12:00:00",
+        "updateTime": "2024-01-01T12:00:00"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}
+
+
+
+DELETE /api/cars/:plate
+功能: 删除车辆 - 删除指定车辆
+路径参数: :plate - 车牌号
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "Vehicle deleted successfully",
+  "data": null
+}
+
+
+
+========================================
+停车位管理接口 Parking Space Management APIs
+========================================
+
+POST /api/spaces
+功能: 添加停车位 - 创建新停车位
+请求参数:
+{
+  "location": "A区-001",      // 必填, 位置描述
+  "type": "普通",             // 必填, 停车位类型
+  "hourlyRate": 5.0,         // 必填, 每小时费率 (元)
+  "status":                // 可选, 状态 ("available", "occupied", "reserved", "maintenance")
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "id": 1,
+    "location": "A区-001",
+    "type": "普通",
+    "hourlyRate": 5.0,
+    "status": "available",
+    "statusText": "可用",
+    "currentPlate": "",
+    "occupiedTime": null
+  }
+}
+
+GET /api/spaces/:id
+功能: 获取停车位信息 - 根据ID获取停车位详情
+路径参数: :id - 停车位ID
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "id": 1,
+    "location": "A区-001",
+    "type": "普通",
+    "hourlyRate": 5.0,
+    "status": ,
+    "statusText": "占用",
+    "currentPlate": "京A12345",
+    "occupiedTime": "2024-01-01T10:00:00"
+  }
+}
+
+GET /api/spaces
+功能: 获取所有停车位 - 获取停车位列表
+请求参数:
+- page (可选): 页码, 默认1
+- limit (可选): 每页数量, 默认20
+- status (可选): 状态筛选 
+- type (可选): 类型筛选
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "spaces": [
+      {
+        "id": 1,
+        "location": "A区-001",
+        "type": "普通",
+        "hourlyRate": 5.0,
+        "status": ,
+        "statusText": "占用",
+        "currentPlate": "京A12345",
+        "occupiedTime": "2024-01-01T10:00:00"
+      }
+    ],
+    "total": 50,
+    "page": 1,
+    "limit": 20
+  }
+}
+
+GET /api/spaces/status/:status
+功能: 按状态获取停车位 - 根据状态筛选停车位
+路径参数: :status - 状态 
+请求参数: 同上
+响应数据: 同上
+
+GET /api/spaces/available
+功能: 获取可用停车位 - 获取当前可用的停车位
+请求参数: 同上
+响应数据: 同上 (仅返回status="available"的停车位)
+
+
+
+PUT /api/spaces/:id
+功能: 更新停车位信息 - 更新指定停车位的信息
+路径参数: :id - 停车位ID
+请求参数:
+{
+  "location": "A区-002",      // 可选
+  "type": "VIP",              // 可选
+  "hourlyRate": 8.0,          // 可选
+  "status":                  // 可选
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "Space updated successfully",
+  "data": {
+    "id": 1,
+    "location": "A区-002",
+    "type": "VIP",
+    "hourlyRate": 8.0,
+    "status": ,
+    "statusText": "可用",
+    "currentPlate": "",
+    "occupiedTime": null
+  }
+}
+
+DELETE /api/spaces/:id
+功能: 删除停车位 - 删除指定停车位
+路径参数: :id - 停车位ID
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "Space deleted successfully",
+  "data": null
+}
+
+POST /api/spaces/:id/occupy
+功能: 占用停车位 - 占用指定停车位
+路径参数: :id - 停车位ID
+请求参数:
+{
+  "plate": "京A12345"         // 必填, 车牌号
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "Space occupied successfully",
+  "data": {
+    "id": 1,
+    "location": "A区-001",
+    "type": "普通",
+    "hourlyRate": 5.0,
+    "status": 1,
+    "statusText": "占用",
+    "currentPlate": "京A12345",
+    "occupiedTime": "2024-01-01T14:00:00"
+  }
+}
+
+POST /api/spaces/:id/release
+功能: 释放停车位 - 释放指定停车位
+路径参数: :id - 停车位ID
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "Space released successfully",
+  "data": {
+    "id": 1,
+    "location": "A区-001",
+    "type": "普通",
+    "hourlyRate": 5.0,
+    "status": 0,
+    "statusText": "可用",
+    "currentPlate": "",
+    "occupiedTime": null
+  }
+}
+
+PUT /api/spaces/:id/status
+功能: 更新停车位状态 - 更新停车位状态
+路径参数: :id - 停车位ID
+请求参数:
+{
+  "status":                // 必填, 新状态 
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "Status updated successfully",
+  "data": {
+    "id": 1,
+    "location": "A区-001",
+    "type": "普通",
+    "hourlyRate": 5.0,
+    "status": ,
+    "statusText": "预留",
+    "currentPlate": "",
+    "occupiedTime": null
+  }
+}
+
+GET /api/spaces/calculate-fee
+功能: 查询未支付停车记录 - 根据车牌号和停车位ID查询未支付的停车记录
+请求参数:
+- spaceId (必填): 停车位ID
+- plate (必填): 车牌号
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "recordId": 1,
+    "plate": "京A12345",
+    "spaceId": 1,
+    "enterTime": "2024-01-01T10:00:00",
+    "exitTime": "2024-01-01T12:00:00",
+    "fee": 20.0,
+    "paid": false
+  }
+}
+
+GET /api/payments/pay
+功能: 处理支付-模拟支付成功
+请求参数:
+{
+  recordId (必填): 订单号
+  paymentMethod (必填): 支付方式string "cash", "card", "mobile", "online"
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    
+  }
+}
+
+POST /api/payments/pay
+功能: 处理停车费用支付 - 标记停车记录为已支付
+请求参数:
+{
+  "recordId": 1,              // 必填, 停车记录ID
+  "paymentMethod": "cash"     // 可选, 支付方式 (cash, card, mobile, online)
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "recordId": 1,
+    "plate": "京A12345",
+    "spaceId": 1,
+    "enterTime": "2024-01-01T10:00:00",
+    "exitTime": "2024-01-01T12:00:00",
+    "fee": 20.0,
+    "paid": true,
+    "paymentMethod": "cash",
+    "paymentTime": "2024-01-01T12:05:00"
+  }
+}
+
+GET /api/spaces/statistics/overview
+功能: 停车位统计 - 获取停车位统计概览
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "totalSpaces": 50,
+    "available": 30,
+    "occupied": 15,
+    "reserved": 3,
+    "disabled": 2,
+    "byType": {
+      "普通": 40,
+      "VIP": 10
+    }
+  }
+}
+
+
+
+========================================
+报告统计接口 Report & Statistics APIs
+========================================
+
+GET /api/reports/revenue
+功能: 收入报告 - 获取收入统计报告
+请求参数:
+- startDate (可选): 开始日期 (YYYY-MM-DD)
+- endDate (可选): 结束日期 (YYYY-MM-DD)
+- type (可选): 报告类型 (daily, weekly, monthly)
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "totalRevenue": 15000.0,  // 总收入 (元)
+    "paidCount": 300,         // 已支付笔数
+    "unpaidCount": 20,        // 未支付笔数
+    "averageFee": 47.0,       // 平均费用 (元)
+    "byPeriod": [
+      {
+        "period": "2024-01",
+        "revenue": 5000.0,
+        "count": 100
+      }
+    ]
+  }
+}
+
+GET /api/reports/parking
+功能: 停车统计报告 - 获取停车统计报告
+请求参数: 同上
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "totalParkings": 320,     // 总停车次数
+    "averageDuration": 180,   // 平均停车时长 (分钟)
+    "peakHours": ["10:00", "14:00", "18:00"],
+    "byType": {
+      "小型车": 200,
+      "大型车": 80,
+      "摩托车": 40
+    }
+  }
+}
+
+
+
+GET /api/reports/space-usage
+功能: 空间使用率报告 - 获取空间使用率报告
+请求参数: 同上
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "totalSpaces": 50,
+    "averageUsage": 0.75,     // 平均使用率
+    "peakUsage": 0.95,        // 峰值使用率
+    "byLocation": {
+      "A区": 0.8,
+      "B区": 0.7,
+      "C区": 0.6
+    }
+  }
+}
+
+GET /api/reports/occupancy-rate
+功能: 占用率报告 - 获取停车位占用率报告
+请求参数: 同上
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "currentOccupancy": 30,   // 当前占用数
+    "occupancyRate": 0.6,     // 占用率
+    "trend": "上升",          // 趋势 (上升/下降/稳定)
+    "hourlyTrend": [
+      {
+        "hour": "08:00",
+        "occupancy": 20,
+        "rate": 0.4
+      }
+    ]
+  }
+}
+
+GET /api/reports/car-statistics
+功能: 车辆统计报告 - 获取车辆统计报告
+请求参数: 同上
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "totalCars": 150,
+    "newCars": 15,            // 新增车辆数
+    "byType": {
+      "小型车": 100,
+      "大型车": 30,
+      "摩托车": 20
+    },
+    "topColors": ["白色", "黑色", "红色"]
+  }
+}
+
+GET /api/reports/car-type-distribution
+功能: 车辆类型分布报告 - 获取车辆类型分布报告
+请求参数: 同上
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "distribution": [
+      {
+        "type": "小型车",
+        "count": 100,
+        "percentage": 66.7
+      },
+      {
+        "type": "大型车",
+        "count": 30,
+        "percentage": 20.0
+      }
+    ]
+  }
+}
+
+
+
+
+GET /api/reports/dashboard
+功能: 仪表板摘要 - 获取仪表板摘要信息
+请求参数: 无
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "summary": {
+      "totalRevenue": 15000.0,  // 总收入 (元)
+      "totalParkings": 320,     // 总停车次数
+      "totalCars": 150,         // 总车辆数
+      "totalSpaces": 50         // 总停车位数
+    },
+    "today": {
+      "revenue": 500.0,         // 今日收入 (元)
+      "parkings": 25,           // 今日停车次数
+      "occupancy": 0.7          // 今日占用率
+    },
+    "realTime": {
+      "availableSpaces": 30,  // 可用停车位
+      "occupiedSpaces": 15,     // 占用停车位
+      "currentCars": 15         // 当前停车数
+    }
+  }
+}
+
+GET /api/reports/detailed
+功能: 详细报告 - 获取详细统计报告
+请求参数:
+- startDate (必填): 开始日期 (YYYY-MM-DD)
+- endDate (必填): 结束日期 (YYYY-MM-DD)
+- reportType (可选): 报告类型 (summary, detailed, comparison)
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "period": {
+      "startDate": "2024-01-01",
+      "endDate": "2024-01-31"
+    },
+    "revenue": {
+      "total": 15000.0,
+      "dailyAverage": 483.9,
+      "growth": 0.15
+    },
+    "parking": {
+      "total": 320,
+      "dailyAverage": 10.3,
+      "growth": 0.08
+    },
+    "detailedStats": {
+      "peakRevenueDay": "2024-01-15",
+      "peakParkingDay": "2024-01-20",
+      "bestPerformingSpace": 25,
+      "mostUsedCarType": "小型车"
+    }
+  }
+}
+
+========================================
+通用响应格式 Common Response Format
+========================================
+
+成功响应:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {} 或 []  // 响应数据
+}
+
+错误响应:
+{
+  "code": 错误代码,
+  "msg": "错误描述",
+  "data": null  // 通常为null
+}
+
+常见错误代码:
+- 4001: Bad Request - 请求参数错误
+- 4002: Invalid Parameter - 参数无效
+- 4041: Not Found - 资源未找到
+- 4042: Resource Not Found - 指定资源不存在
+- 5001: Internal Server Error - 服务器内部错误
+- 5002: Operation Failed - 操作失败
+
+========================================
+分页参数 Pagination Parameters
+========================================
+
+支持分页的接口:
+- page: 页码, 默认1
+- limit: 每页数量, 默认20, 最大100
+
+分页响应格式:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "items": [],      // 数据列表
+    "total": 100,     // 总记录数
+    "page": 1,        // 当前页码
+    "limit": 20,      // 每页数量
+    "pages": 5        // 总页数
+  }
+}
+
+========================================
+时间格式 Time Format
+========================================
+
+所有时间字段使用 ISO 8601 格式:
+- 格式: YYYY-MM-DDTHH:MM:SS
+- 示例: 2024-01-01T12:00:00
+- 时区: 本地时区
+
+========================================
+货币单位 Currency Unit
+========================================
+
+所有货币相关字段使用人民币 (元):
+- 费率: 元/小时
+- 费用: 元
+- 精度: 保留2位小数

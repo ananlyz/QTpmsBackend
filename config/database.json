@@ -1,0 +1,24 @@
+{
+    "database": {
+        "type": "QSQLITE",
+        "name": "parking_server.db",
+        "path": "./data",
+        "connection_pool_size": 10,
+        "connection_timeout": 30000,
+        "max_retry_count": 3,
+        "retry_interval": 1000
+    },
+    "backup": {
+        "enabled": true,
+        "backup_path": "./backups",
+        "backup_interval_hours": 24,
+        "max_backup_files": 30,
+        "compression_enabled": true
+    },
+    "maintenance": {
+        "auto_vacuum": true,
+        "vacuum_interval_days": 7,
+        "data_retention_days": 730,
+        "log_cleanup_days": 90
+    }
+}
