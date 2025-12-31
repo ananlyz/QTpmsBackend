@@ -47,7 +47,7 @@ QJsonObject SpaceService::addSpace(const QString& location, const QString& type,
     }
 }
 
-QJsonObject SpaceService::updateSpace(int id, const QString& location, const QString& type, double hourlyRate)
+QJsonObject SpaceService::updateSpace(int id, const QString& location, const QString& type, double hourlyRate, const QString& status)
 {
     try {
         if (!SpaceRepository::instance().exists(id)) {
@@ -66,6 +66,7 @@ QJsonObject SpaceService::updateSpace(int id, const QString& location, const QSt
         space.setLocation(location);
         space.setType(type);
         space.setHourlyRate(hourlyRate);
+        space.setStatus(parseStatus(status));
         
         if (SpaceRepository::instance().update(space)) {
             return ApiResponse::success("Space updated", spaceToJson(space));

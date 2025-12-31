@@ -95,6 +95,7 @@ void SpaceController::updateSpace(const HttpRequest& request, HttpResponse& resp
         QString location = body["location"].toString().trimmed();
         QString type = body["type"].toString().trimmed().toLower();
         double hourlyRate = body["hourlyRate"].toDouble();
+        QString status = body["status"].toString().trimmed();
         
         // 验证字段格式
         if (location.isEmpty() || type.isEmpty() || hourlyRate <= 0) {
@@ -103,7 +104,7 @@ void SpaceController::updateSpace(const HttpRequest& request, HttpResponse& resp
         }
         
         // 调用服务层
-        QJsonObject result = SpaceService::instance().updateSpace(spaceId, location, type, hourlyRate);
+        QJsonObject result = SpaceService::instance().updateSpace(spaceId, location, type, hourlyRate, status);
         
         // 设置响应
         if (result["code"] == 0) {
