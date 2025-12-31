@@ -168,8 +168,8 @@ QJsonObject SpaceService::occupySpace(int id, const QString& plate)
             return ApiResponse::error("Space not found");
         }
         
-        QRegularExpression regex("^[A-Z]{1}[A-Z0-9]{4,5}[A-Z0-9��ѧ���۰�]{1}$");
-        if (!regex.match(plate.toUpper()).hasMatch()) {
+        
+        if (!SpaceService::validatePlate(plate)) {
             return ApiResponse::error("Invalid plate");
         }
         
@@ -355,7 +355,7 @@ bool SpaceService::validatePlate(const QString& plate)
 {
     // 第1位汉字 + 第2位大写字母 + 后5位大写字母或数字
     static QRegularExpression reg(
-        uR"(^[\x{4e00}-\x{9fa5}][A-Z][A-Z0-9]{5}$)"
+        R"(^[\x{4e00}-\x{9fa5}][A-Z][A-Z0-9]{5}$)"
     );
 
     return reg.match(plate).hasMatch();

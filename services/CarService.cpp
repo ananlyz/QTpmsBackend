@@ -179,7 +179,7 @@ bool CarService::validatePlate(const QString& plate)
 {
     // 第1位汉字 + 第2位大写字母 + 后5位大写字母或数字
     static QRegularExpression reg(
-        uR"(^[\x{4e00}-\x{9fa5}][A-Z][A-Z0-9]{5}$)"
+        R"(^[\x{4e00}-\x{9fa5}][A-Z][A-Z0-9]{5}$)"
     );
 
     return reg.match(plate).hasMatch();
