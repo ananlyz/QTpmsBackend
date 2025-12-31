@@ -3,6 +3,7 @@
 #include "../utils/Logger.h"
 #include "../dao/SpaceRepository.h"
 #include "../dao/ParkingRecordRepository.h"
+#include "../dao/QueueRepository.h"
 #include "../services/BillingService.h"
 #include <QRegularExpression>
 
@@ -217,6 +218,24 @@ QJsonObject SpaceService::releaseSpace(int id)
             return billingResult; // 返回计费服务的错误
         }
         
+        // 检查排队队列，如果有排队的车辆，自动占用该车位
+        QueueItem firstInQueue = QueueRepository::instance().findFirst();
+        if (firstInQueue.id != 0) {
+            // 有排队的车辆，自动占用
+            QString plate = firstInQueue.plate;
+            if (SpaceRepository::instance().occupySpace(id, plate)) {
+                // 占用成功，从队列中移除
+                QueueRepository::instance().remove(plate);
+                Logger::info(QString("Auto-assigned space %1 to queued vehicle %2").arg(id).arg(plate));
+                
+                // 重新获取车位信息
+                ParkingSpace space = SpaceRepository::instance().findById(id);
+                return ApiResponse::success("Space released and auto-assigned to queued vehicle", spaceToJson(space));
+            } else {
+                Logger::error(QString("Failed to auto-assign space %1 to queued vehicle %2").arg(id).arg(plate));
+            }
+        }
+        
         // 重新获取车位信息
         ParkingSpace space = SpaceRepository::instance().findById(id);
         return ApiResponse::success("Space released", spaceToJson(space));
@@ -332,6 +351,12 @@ bool SpaceService::validateLocation(const QString& location)
     return !location.trimmed().isEmpty() && location.length() <= 50;
 }
 
+bool SpaceService::validatePlate(const QString& plate)
+{
+    QRegularExpression regex("^[A-Z]{1}[A-Z0-9]{4,5}[A-Z0-9��ѧ���۰�]{1}$");
+    return regex.match(plate.toUpper()).hasMatch();
+}
+
 
 bool SpaceService::validateHourlyRate(double rate)
 {
@@ -355,5 +380,58 @@ QString SpaceService::statusToString(ParkingSpace::Status status)
         case ParkingSpace::RESERVED: return "reserved";
         case ParkingSpace::DISABLED: return "maintenance";
         default: return "unknown";
+    }
+}
+
+QJsonObject SpaceService::joinQueue(const QString& plate)
+{
+    try {
+        if (!SpaceService::instance().validatePlate(plate)) {
+            return ApiResponse::error("Invalid plate number");
+        }
+        
+        // 检查车辆是否已经在排队
+        if (QueueRepository::instance().exists(plate)) {
+            return ApiResponse::error("Vehicle already in queue");
+        }
+        
+        // 检查车辆是否已经在停车
+        QList<ParkingRecord> activeRecords = ParkingRecordRepository::instance().findActiveByPlate(plate);
+        if (!activeRecords.isEmpty()) {
+            return ApiResponse::error("Vehicle already parking");
+        }
+        
+        // 检查是否有空闲车位
+        QJsonArray availableSpaces = getAvailableSpaces();
+        if (!availableSpaces.isEmpty()) {
+            // 有空闲车位，直接占用第一个
+            QJsonObject firstSpace = availableSpaces.first().toObject();
+            int spaceId = firstSpace["id"].toInt();
+            
+            QJsonObject occupyResult = occupySpace(spaceId, plate);
+            if (occupyResult["code"] == 0) {
+                return ApiResponse::success("Space assigned directly", occupyResult["data"].toObject());
+            } else {
+                // 占用失败，加入队列
+                Logger::warning(QString("Failed to occupy available space %1 for plate %2, adding to queue").arg(spaceId).arg(plate));
+            }
+        }
+        
+        // 加入排队队列
+        QueueItem item(plate);
+        if (QueueRepository::instance().insert(item)) {
+            QJsonObject queueInfo;
+            queueInfo["plate"] = plate;
+            queueInfo["queueTime"] = item.queueTime.toString(Qt::ISODate);
+            queueInfo["position"] = QueueRepository::instance().count();
+            
+            return ApiResponse::success("Added to queue", queueInfo);
+        } else {
+            return ApiResponse::error("Failed to join queue");
+        }
+        
+    } catch (const std::exception& e) {
+        Logger::error(QString("Error joining queue: %1").arg(e.what()));
+        return ApiResponse::error("Internal server error");
     }
 }

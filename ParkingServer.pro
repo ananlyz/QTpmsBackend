@@ -28,6 +28,7 @@ SOURCES += \
     dao/CarRepository.cpp \
     dao/SpaceRepository.cpp \
     dao/ParkingRecordRepository.cpp \
+    dao/QueueRepository.cpp \
     utils/DateTimeUtil.cpp \
     utils/JsonUtil.cpp \
     utils/Logger.cpp
@@ -55,6 +56,7 @@ HEADERS += \
     dao/CarRepository.h \
     dao/SpaceRepository.h \
     dao/ParkingRecordRepository.h \
+    dao/QueueRepository.h \
     utils/DateTimeUtil.h \
     utils/JsonUtil.h \
     utils/Logger.h

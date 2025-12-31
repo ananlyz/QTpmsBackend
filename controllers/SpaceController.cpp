@@ -560,3 +560,38 @@ QString SpaceController::extractStatusFromPath(const QString& path)
     }
     return "";
 }
+
+void SpaceController::joinQueue(const HttpRequest& request, HttpResponse& response)
+{
+    try {
+        // 从请求体获取车牌号
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(request.bodyRaw);
+        if (!jsonDoc.isObject()) {
+            response.badRequest("Invalid JSON format");
+            return;
+        }
+        
+        QJsonObject json = jsonDoc.object();
+        QString plate = json["plate"].toString();
+        
+        if (plate.isEmpty()) {
+            response.badRequest("Plate number is required");
+            return;
+        }
+        
+        // 调用服务层
+        QJsonObject result = SpaceService::instance().joinQueue(plate);
+        
+        if (result["code"] == 0) {
+            response.ok(result);
+        } else {
+            response.badRequest(result["msg"].toString());
+        }
+        
+        Logger::info(QString("Join queue request: plate=%1").arg(plate));
+        
+    } catch (const std::exception& e) {
+        Logger::error(QString("Error in joinQueue: %1").arg(e.what()));
+        response.serverError("Internal server error");
+    }
+}

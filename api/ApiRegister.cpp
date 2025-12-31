@@ -181,6 +181,11 @@ void ApiRegister::registerSpaceRoutes(Router& router)
         SpaceController::instance().getUsageStatistics(req, res);
     });
     
+    // 加入排队
+    router.post("/api/queue/join", {}, [](const HttpRequest& req, HttpResponse& res) {
+        SpaceController::instance().joinQueue(req, res);
+    });
+    
     Logger::info("Space routes registered");
 }
 

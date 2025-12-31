@@ -263,6 +263,21 @@ bool ParkingServerApplication::createDatabaseTables()
         return false;
     }
     
+    // 创建排队表
+    QString createQueueTable = R"(
+        CREATE TABLE IF NOT EXISTS parking_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plate TEXT NOT NULL,
+            queue_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(plate)
+        )
+    )";
+    
+    if (!query.exec(createQueueTable)) {
+        LOG_ERROR("Failed to create parking_queue table: " + query.lastError().text());
+        return false;
+    }
+    
     LOG_INFO("Database tables created successfully");
     return true;
 }

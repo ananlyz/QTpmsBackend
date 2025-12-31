@@ -347,6 +347,24 @@ GET /api/payments/pay
   }
 }
 
+POST /api/queue/join
+功能: 加入停车排队系统 - 当所有车位都占用时加入排队，否则直接分配车位
+请求参数:
+{
+  "plate": "京A12345"         // 必填, 车牌号
+}
+响应数据:
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "plate": "京A12345",
+    "queueTime": "2024-01-01T14:00:00",  // 排队时间
+    "position": 1,                        // 排队位置
+    "assignedSpaceId": 1                  // 如果直接分配，则包含此字段
+  }
+}
+
 POST /api/payments/pay
 功能: 处理停车费用支付 - 标记停车记录为已支付
 请求参数:

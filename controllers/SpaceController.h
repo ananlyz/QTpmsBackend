@@ -38,6 +38,9 @@ public:
     
     // 计费相关
     void calculateParkingFee(const HttpRequest& request, HttpResponse& response);
+    
+    // 排队系统
+    void joinQueue(const HttpRequest& request, HttpResponse& response);
 
 private:
     SpaceController() = default;

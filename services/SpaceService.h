@@ -41,6 +41,9 @@ public:
     
     // 计费相关
     double calculateParkingFee(int spaceId, const QDateTime& startTime, const QDateTime& endTime);
+    
+    // 排队系统
+    QJsonObject joinQueue(const QString& plate);
 
 signals:
     void spaceAdded(int id);
@@ -57,6 +60,7 @@ private:
     QJsonObject spaceToJson(const ParkingSpace& space);
     QJsonArray spacesToJson(const QList<ParkingSpace>& spaces);
     bool validateLocation(const QString& location);
+    bool validatePlate(const QString& plate);
     bool validateType(const QString& type);
     bool validateHourlyRate(double rate);
     ParkingSpace::Status parseStatus(const QString& status);
