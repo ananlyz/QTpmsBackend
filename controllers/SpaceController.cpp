@@ -104,7 +104,7 @@ void SpaceController::updateSpace(const HttpRequest& request, HttpResponse& resp
         }
         
         // 调用服务层
-        QJsonObject result = SpaceService::instance().updateSpace(spaceId, location, type, hourlyRate, status);
+        QJsonObject result = SpaceService::instance().updateSpace(spaceId, location, type, hourlyRate);
         
         // 设置响应
         if (result["code"] == 0) {

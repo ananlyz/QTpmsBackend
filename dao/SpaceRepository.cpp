@@ -150,7 +150,7 @@ bool SpaceRepository::occupySpace(int id, const QString& plate)
 {
     QString updateQuery = R"(
         UPDATE parking_spaces 
-        SET status = 'occupied', current_plate = :plate, occupied_time = datetime('now')
+        SET status = 'occupied', current_plate = :plate, occupied_time = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime')
         WHERE id = :id AND status = 'available'
     )";
     
