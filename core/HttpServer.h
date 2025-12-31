@@ -42,7 +42,11 @@ private:
     int m_maxConnections;
     int m_requestTimeout;
     
-    void parseHttpRequest(QTcpSocket* socket, const QByteArray& data);
+    // 为每个socket维护的缓冲区，用于累积TCP数据
+    QMap<QTcpSocket*, QByteArray> socketBuffers;
+    
+    void processBufferedData(QTcpSocket* socket);
+    bool tryParseCompleteRequest(QTcpSocket* socket, QByteArray& buffer);
     void sendHttpResponse(QTcpSocket* socket, const HttpResponse& response);
     QString extractHeaderValue(const QString& headers, const QString& headerName);
     QString parseRequestLine(const QString& line, QString& method, QString& path, QString& httpVersion);
