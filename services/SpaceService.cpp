@@ -353,8 +353,12 @@ bool SpaceService::validateLocation(const QString& location)
 
 bool SpaceService::validatePlate(const QString& plate)
 {
-    QRegularExpression regex("^[A-Z]{1}[A-Z0-9]{4,5}[A-Z0-9��ѧ���۰�]{1}$");
-    return regex.match(plate.toUpper()).hasMatch();
+    // 第1位汉字 + 第2位大写字母 + 后5位大写字母或数字
+    static QRegularExpression reg(
+        uR"(^[\x{4e00}-\x{9fa5}][A-Z][A-Z0-9]{5}$)"
+    );
+
+    return reg.match(plate).hasMatch();
 }
 
 
