@@ -21,8 +21,15 @@ QJsonObject CarService::registerCar(const QString& plate, const QString& type, c
           //  return ApiResponse::error("Invalid car type");
        // }
         
+        // 检查车牌是否已注册
+        if (CarRepository::instance().exists(plate)) {
+            // 车牌已注册，返回现有车辆信息
+            Car existingCar = CarRepository::instance().findByPlate(plate);
+            Logger::info(QString("Car already registered, returning existing info for plate: %1").arg(plate));
+            return ApiResponse::success("Car already registered", carToJson(existingCar));
+        }
         
-        
+        // 新车注册
         Car car;
         car.setPlate(plate);
         car.setColor(color);
