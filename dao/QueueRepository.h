@@ -28,6 +28,8 @@ public:
     QList<QueueItem> findAll();
     bool exists(const QString& plate);
     int count();
+    QueueItem findByPlate(const QString& plate);
+    int getPosition(const QString& plate);
 
 private:
     QueueRepository() = default;

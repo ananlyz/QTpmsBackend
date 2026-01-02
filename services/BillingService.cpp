@@ -76,6 +76,10 @@ QJsonObject BillingService::endParking(int recordId)
 
         if (ParkingRecordRepository::instance().update(record)) {
             SpaceRepository::instance().releaseSpace(record.getSpaceId());
+            
+            // 通知空间可用，触发队列处理
+            SpaceService::instance().notifySpaceAvailable(record.getSpaceId());
+            
             return ApiResponse::success("Parking ended", recordToJson(record));
         } else {
             return ApiResponse::error("Failed to update record");
@@ -352,4 +356,20 @@ QJsonObject BillingService::generatePaymentReminder(const QString& plate, double
     reminder["reminderDate"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     reminder["message"] = QString("Unpaid parking fee: %1").arg(amount, 0, 'f', 2);
     return reminder;
+}
+
+QJsonObject BillingService::processQueueForAvailableSpaces()
+{
+    try {
+        // 调用SpaceService的队列处理方法
+        QJsonObject result = SpaceService::instance().processQueueAndAssignSpaces();
+        return result;
+    } catch (const std::exception& e) {
+        Logger::error(QString("Error processing queue for available spaces: %1").arg(e.what()));
+        QJsonObject errorResult;
+        errorResult["assignedCount"] = 0;
+        errorResult["assignedVehicles"] = QJsonArray();
+        errorResult["message"] = "Error processing queue";
+        return errorResult;
+    }
 }

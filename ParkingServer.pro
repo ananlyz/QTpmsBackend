@@ -1,4 +1,4 @@
-QT += core network sql
+QT += core network sql concurrent
 CONFIG += c++14 console
 CONFIG -= app_bundle
 
@@ -22,6 +22,7 @@ SOURCES += \
     services/CarService.cpp \
     services/SpaceService.cpp \
     services/BillingService.cpp \
+    services/QueueProcessor.cpp \
     models/Car.cpp \
     models/ParkingRecord.cpp \
     models/ParkingSpace.cpp \
@@ -50,6 +51,7 @@ HEADERS += \
     services/CarService.h \
     services/SpaceService.h \
     services/BillingService.h \
+    services/QueueProcessor.h \
     models/Car.h \
     models/ParkingRecord.h \
     models/ParkingSpace.h \

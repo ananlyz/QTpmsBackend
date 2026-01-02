@@ -37,6 +37,9 @@ public:
     QJsonObject getUnpaidAmount(const QString& plate);
     QJsonObject sendPaymentReminder(const QString& plate);
     
+    // 队列处理
+    QJsonObject processQueueForAvailableSpaces();
+    
     // 费率管理
     QJsonObject getCurrentRates();
     double getHourlyRate(int spaceId);

@@ -44,6 +44,11 @@ public:
     
     // 排队系统
     QJsonObject joinQueue(const QString& plate);
+    QJsonObject processQueueAndAssignSpaces();
+    
+    // 空间可用性通知（当车位变为可用时调用）
+    void notifySpaceAvailable(int spaceId);
+    void notifySpacesAvailable(const QList<int>& spaceIds);
 
 signals:
     void spaceAdded(int id);

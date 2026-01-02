@@ -80,6 +80,36 @@ bool QueueRepository::exists(const QString& plate)
     return false;
 }
 
+QueueItem QueueRepository::findByPlate(const QString& plate)
+{
+    QString selectQuery = "SELECT * FROM parking_queue WHERE plate = :plate ORDER BY queue_time ASC LIMIT 1";
+    QVariantMap params;
+    params["plate"] = plate;
+
+    QList<QVariantMap> results = instance().executeQueryWithResults(selectQuery, params);
+
+    if (!results.isEmpty()) {
+        return mapToItem(results.first());
+    }
+
+    return QueueItem();
+}
+
+int QueueRepository::getPosition(const QString& plate)
+{
+    // 获取所有排队的车辆，按queue_time升序排列
+    QList<QueueItem> allItems = findAll();
+    
+    // 查找指定车牌的位置
+    for (int i = 0; i < allItems.size(); ++i) {
+        if (allItems[i].plate == plate) {
+            return i + 1; // 位置从1开始计数
+        }
+    }
+    
+    return -1; // 未找到
+}
+
 int QueueRepository::count()
 {
     QString countQuery = "SELECT COUNT(*) as count FROM parking_queue";

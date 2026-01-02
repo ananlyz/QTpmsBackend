@@ -5,6 +5,7 @@
 #include "../dao/ParkingRecordRepository.h"
 #include "../dao/QueueRepository.h"
 #include "../services/BillingService.h"
+#include "../services/QueueProcessor.h"
 #include <QRegularExpression>
 
 SpaceService& SpaceService::instance()
@@ -218,23 +219,8 @@ QJsonObject SpaceService::releaseSpace(int id)
             return billingResult; // 返回计费服务的错误
         }
         
-        // 检查排队队列，如果有排队的车辆，自动占用该车位
-        QueueItem firstInQueue = QueueRepository::instance().findFirst();
-        if (firstInQueue.id != 0) {
-            // 有排队的车辆，自动占用
-            QString plate = firstInQueue.plate;
-            if (SpaceRepository::instance().occupySpace(id, plate)) {
-                // 占用成功，从队列中移除
-                QueueRepository::instance().remove(plate);
-                Logger::info(QString("Auto-assigned space %1 to queued vehicle %2").arg(id).arg(plate));
-                
-                // 重新获取车位信息
-                ParkingSpace space = SpaceRepository::instance().findById(id);
-                return ApiResponse::success("Space released and auto-assigned to queued vehicle", spaceToJson(space));
-            } else {
-                Logger::error(QString("Failed to auto-assign space %1 to queued vehicle %2").arg(id).arg(plate));
-            }
-        }
+        // 通知队列处理器有空位可用
+        notifySpaceAvailable(id);
         
         // 重新获取车位信息
         ParkingSpace space = SpaceRepository::instance().findById(id);
@@ -254,9 +240,15 @@ QJsonObject SpaceService::updateSpaceStatus(int id, const QString& status)
         
         ParkingSpace::Status spaceStatus = parseStatus(status);
         ParkingSpace space = SpaceRepository::instance().findById(id);
+        ParkingSpace::Status oldStatus = space.getStatus();
         space.setStatus(spaceStatus);
         
         if (SpaceRepository::instance().update(space)) {
+            // 如果状态从非可用变为可用，通知队列处理器
+            if (oldStatus != ParkingSpace::AVAILABLE && spaceStatus == ParkingSpace::AVAILABLE) {
+                notifySpaceAvailable(id);
+            }
+            
             return ApiResponse::success("Status updated", spaceToJson(space));
         } else {
             return ApiResponse::error("Failed to update status");
@@ -394,31 +386,60 @@ QJsonObject SpaceService::joinQueue(const QString& plate)
             return ApiResponse::error("Invalid plate number");
         }
         
-        // 检查车辆是否已经在排队
-        if (QueueRepository::instance().exists(plate)) {
-            return ApiResponse::error("Vehicle already in queue");
-        }
-        
         // 检查车辆是否已经在停车
         QList<ParkingRecord> activeRecords = ParkingRecordRepository::instance().findActiveByPlate(plate);
         if (!activeRecords.isEmpty()) {
-            return ApiResponse::error("Vehicle already parking");
+            // 车辆已在停车，返回当前占用的车位信息
+            ParkingRecord currentRecord = activeRecords.first();
+            QJsonObject spaceInfo;
+            spaceInfo["spaceId"] = currentRecord.getSpaceId();
+            spaceInfo["plate"] = plate;
+            spaceInfo["startTime"] = currentRecord.getEnterTime().toString(Qt::ISODate);
+            return ApiResponse::success("Space assigned directly", spaceInfo);
         }
         
         // 检查是否有空闲车位
         QJsonArray availableSpaces = getAvailableSpaces();
         if (!availableSpaces.isEmpty()) {
-            // 有空闲车位，直接占用第一个
-            QJsonObject firstSpace = availableSpaces.first().toObject();
-            int spaceId = firstSpace["id"].toInt();
+            // 处理排队队列，按顺序为排队车辆分配车位
+            QJsonObject processResult = processQueueAndAssignSpaces();
             
-            QJsonObject occupyResult = occupySpace(spaceId, plate);
-            if (occupyResult["code"] == 0) {
-                return ApiResponse::success("Space assigned directly", occupyResult["data"].toObject());
-            } else {
-                // 占用失败，加入队列
-                Logger::warning(QString("Failed to occupy available space %1 for plate %2, adding to queue").arg(spaceId).arg(plate));
+            // 重新检查当前车辆是否已经被分配车位（可能在处理队列时被分配）
+            QList<ParkingRecord> updatedRecords = ParkingRecordRepository::instance().findActiveByPlate(plate);
+            if (!updatedRecords.isEmpty()) {
+                ParkingRecord assignedRecord = updatedRecords.first();
+                QJsonObject spaceInfo;
+                spaceInfo["spaceId"] = assignedRecord.getSpaceId();
+                spaceInfo["plate"] = plate;
+                spaceInfo["startTime"] = assignedRecord.getEnterTime().toString(Qt::ISODate);
+                spaceInfo["message"] = "Space assigned from queue processing";
+                return ApiResponse::success("Space assigned from queue", spaceInfo);
             }
+            
+            // 如果还有剩余车位，直接分配给当前车辆
+            QJsonArray remainingSpaces = getAvailableSpaces();
+            if (!remainingSpaces.isEmpty()) {
+                QJsonObject firstSpace = remainingSpaces.first().toObject();
+                int spaceId = firstSpace["id"].toInt();
+                
+                QJsonObject occupyResult = occupySpace(spaceId, plate);
+                if (occupyResult["code"] == 0) {
+                    return ApiResponse::success("Space assigned directly", occupyResult["data"].toObject());
+                } else {
+                    // 占用失败，加入队列
+                    Logger::warning(QString("Failed to occupy available space %1 for plate %2, adding to queue").arg(spaceId).arg(plate));
+                }
+            }
+        }
+
+        // 检查车辆是否已经在排队
+        if (QueueRepository::instance().exists(plate)) {
+            QueueItem existingItem = QueueRepository::instance().findByPlate(plate);
+            QJsonObject queueInfo;
+            queueInfo["plate"] = plate;
+            queueInfo["queueTime"] = existingItem.queueTime.toString(Qt::ISODate);
+            queueInfo["position"] = QueueRepository::instance().getPosition(plate);
+            return ApiResponse::success("Vehicle already in queue", queueInfo);
         }
         
         // 加入排队队列
@@ -427,7 +448,7 @@ QJsonObject SpaceService::joinQueue(const QString& plate)
             QJsonObject queueInfo;
             queueInfo["plate"] = plate;
             queueInfo["queueTime"] = item.queueTime.toString(Qt::ISODate);
-            queueInfo["position"] = QueueRepository::instance().count();
+            queueInfo["position"] = QueueRepository::instance().getPosition(plate);
             
             return ApiResponse::success("Added to queue", queueInfo);
         } else {
@@ -437,5 +458,54 @@ QJsonObject SpaceService::joinQueue(const QString& plate)
     } catch (const std::exception& e) {
         Logger::error(QString("Error joining queue: %1").arg(e.what()));
         return ApiResponse::error("Internal server error");
+    }
+}
+
+QJsonObject SpaceService::processQueueAndAssignSpaces()
+{
+    // 使用集中式队列处理器
+    return QueueProcessor::instance().processQueueForAvailableSpaces();
+}
+
+void SpaceService::notifySpaceAvailable(int spaceId)
+{
+    try {
+        ParkingSpace space = SpaceRepository::instance().findById(spaceId);
+        if (space.getId() == 0) {
+            Logger::warning(QString("Cannot notify space available: space %1 not found").arg(spaceId));
+            return;
+        }
+        
+        if (space.getStatus() == ParkingSpace::AVAILABLE) {
+            Logger::info(QString("Space %1 is now available, triggering queue processing").arg(spaceId));
+            
+            // 检查是否有排队车辆，避免无谓的队列处理
+            int queueCount = QueueRepository::instance().count();
+            if (queueCount > 0) {
+                // 异步处理队列，避免阻塞当前操作
+                QueueProcessor::instance().checkAndProcessQueue();
+            } else {
+                Logger::debug(QString("No vehicles in queue, skipping queue processing for space %1").arg(spaceId));
+            }
+        }
+    } catch (const std::exception& e) {
+        Logger::error(QString("Error notifying space available for space %1: %2").arg(spaceId).arg(e.what()));
+    }
+}
+
+void SpaceService::notifySpacesAvailable(const QList<int>& spaceIds)
+{
+    if (spaceIds.isEmpty()) {
+        return;
+    }
+    
+    // 检查是否有排队车辆，避免无谓的队列处理
+    int queueCount = QueueRepository::instance().count();
+    if (queueCount > 0) {
+        Logger::info(QString("Notifying %1 spaces available, triggering queue processing").arg(spaceIds.size()));
+        // 异步处理队列，避免阻塞当前操作
+        QueueProcessor::instance().checkAndProcessQueue();
+    } else {
+        Logger::debug(QString("No vehicles in queue, skipping queue processing for %1 spaces").arg(spaceIds.size()));
     }
 }
