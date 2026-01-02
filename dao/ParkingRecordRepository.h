@@ -22,7 +22,13 @@ public:
     QList<ParkingRecord> findActiveByPlate(const QString& plate);
     QList<ParkingRecord> findActiveBySpaceId(int spaceId);
     QList<ParkingRecord> findUnpaidByPlateAndSpace(const QString& plate, int spaceId);
+    
+    // 统计查询方法
     int count();
+    int countByDateRange(const QDateTime& startTime, const QDateTime& endTime);
+    double sumRevenueByDateRange(const QDateTime& startTime, const QDateTime& endTime);
+    int countByPaymentStatus(bool isPaid, const QDateTime& startTime, const QDateTime& endTime);
+    double sumRevenueByPaymentStatus(bool isPaid, const QDateTime& startTime, const QDateTime& endTime);
 
 private:
     ParkingRecordRepository() = default;

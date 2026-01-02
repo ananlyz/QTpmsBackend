@@ -186,9 +186,26 @@ QJsonObject BillingService::processPayment(int recordId, double amount, const QS
 QJsonObject BillingService::getRevenueStatistics(const QDateTime& startTime, const QDateTime& endTime)
 {
     try {
+        // 获取指定时间范围内的收入统计
+        double totalRevenue = ParkingRecordRepository::instance().sumRevenueByDateRange(startTime, endTime);
+        int totalRecords = ParkingRecordRepository::instance().countByDateRange(startTime, endTime);
+        int paidRecords = ParkingRecordRepository::instance().countByPaymentStatus(true, startTime, endTime);
+        int unpaidRecords = ParkingRecordRepository::instance().countByPaymentStatus(false, startTime, endTime);
+        double paidRevenue = ParkingRecordRepository::instance().sumRevenueByPaymentStatus(true, startTime, endTime);
+        double unpaidRevenue = ParkingRecordRepository::instance().sumRevenueByPaymentStatus(false, startTime, endTime);
+        
         QJsonObject stats;
-        stats["totalRevenue"] = 0.0; // TODO: implement actual calculation
-        stats["period"] = QString("%1 to %2").arg(startTime.toString(), endTime.toString());
+        stats["totalRevenue"] = totalRevenue;
+        stats["paidRevenue"] = paidRevenue;
+        stats["unpaidRevenue"] = unpaidRevenue;
+        stats["totalRecords"] = totalRecords;
+        stats["paidRecords"] = paidRecords;
+        stats["unpaidRecords"] = unpaidRecords;
+        stats["period"] = QString("%1 to %2").arg(startTime.toString(Qt::ISODate), endTime.toString(Qt::ISODate));
+        
+        Logger::info(QString("Revenue statistics: total=%1, paid=%2, unpaid=%3, records=%4")
+                    .arg(totalRevenue).arg(paidRevenue).arg(unpaidRevenue).arg(totalRecords));
+        
         return ApiResponse::success(stats);
     } catch (const std::exception& e) {
         Logger::error(QString("Error getting revenue stats: %1").arg(e.what()));
@@ -199,8 +216,40 @@ QJsonObject BillingService::getRevenueStatistics(const QDateTime& startTime, con
 QJsonObject BillingService::getParkingStatistics(const QDateTime& startTime, const QDateTime& endTime)
 {
     try {
+        // 获取指定时间范围内的停车统计
+        int totalParkings = ParkingRecordRepository::instance().countByDateRange(startTime, endTime);
+        int activeParkings = ParkingRecordRepository::instance().countByPaymentStatus(false, startTime, endTime); // 未支付表示可能还在停车
+        int completedParkings = ParkingRecordRepository::instance().countByPaymentStatus(true, startTime, endTime); // 已支付表示已完成
+        
+        // 计算平均停车时长和总时长
+        QList<ParkingRecord> records = ParkingRecordRepository::instance().findAll();
+        qint64 totalDuration = 0;
+        int completedCount = 0;
+        
+        for (const ParkingRecord& record : records) {
+            if (record.getEnterTime() >= startTime && record.getEnterTime() <= endTime) {
+                if (record.getExitTime().isValid()) {
+                    qint64 duration = record.getEnterTime().secsTo(record.getExitTime());
+                    totalDuration += duration;
+                    completedCount++;
+                }
+            }
+        }
+        
+        double avgDurationHours = completedCount > 0 ? (double)totalDuration / completedCount / 3600.0 : 0.0;
+        double totalDurationHours = totalDuration / 3600.0;
+        
         QJsonObject stats;
-        stats["totalParkings"] = 0; // TODO
+        stats["totalParkings"] = totalParkings;
+        stats["activeParkings"] = activeParkings;
+        stats["completedParkings"] = completedParkings;
+        stats["avgDurationHours"] = avgDurationHours;
+        stats["totalDurationHours"] = totalDurationHours;
+        stats["period"] = QString("%1 to %2").arg(startTime.toString(Qt::ISODate), endTime.toString(Qt::ISODate));
+        
+        Logger::info(QString("Parking statistics: total=%1, active=%2, completed=%3, avgDuration=%4h")
+                    .arg(totalParkings).arg(activeParkings).arg(completedParkings).arg(avgDurationHours));
+        
         return ApiResponse::success(stats);
     } catch (const std::exception& e) {
         Logger::error(QString("Error getting parking stats: %1").arg(e.what()));
@@ -211,8 +260,52 @@ QJsonObject BillingService::getParkingStatistics(const QDateTime& startTime, con
 QJsonObject BillingService::getPaymentStatistics(const QDateTime& startTime, const QDateTime& endTime)
 {
     try {
+        // 获取支付统计
+        int paidRecords = ParkingRecordRepository::instance().countByPaymentStatus(true, startTime, endTime);
+        int unpaidRecords = ParkingRecordRepository::instance().countByPaymentStatus(false, startTime, endTime);
+        double paidRevenue = ParkingRecordRepository::instance().sumRevenueByPaymentStatus(true, startTime, endTime);
+        double unpaidRevenue = ParkingRecordRepository::instance().sumRevenueByPaymentStatus(false, startTime, endTime);
+        int totalRecords = paidRecords + unpaidRecords;
+        double totalRevenue = paidRevenue + unpaidRevenue;
+        
+        // 支付方式统计
+        QJsonObject paymentMethodStats;
+        QStringList methods = {"cash", "card", "mobile", "online"};
+        for (const QString& method : methods) {
+            int count = 0;
+            double amount = 0.0;
+            
+            QList<ParkingRecord> records = ParkingRecordRepository::instance().findAll();
+            for (const ParkingRecord& record : records) {
+                if (record.getEnterTime() >= startTime && record.getEnterTime() <= endTime && 
+                    record.getIsPaid() && record.getPayMethod() == method) {
+                    count++;
+                    amount += record.getFee();
+                }
+            }
+            
+            if (count > 0) {
+                QJsonObject methodStat;
+                methodStat["count"] = count;
+                methodStat["amount"] = amount;
+                paymentMethodStats[method] = methodStat;
+            }
+        }
+        
         QJsonObject stats;
-        stats["totalPayments"] = 0; // TODO
+        stats["totalPayments"] = totalRecords;
+        stats["paidRecords"] = paidRecords;
+        stats["unpaidRecords"] = unpaidRecords;
+        stats["paidAmount"] = paidRevenue;
+        stats["unpaidAmount"] = unpaidRevenue;
+        stats["totalAmount"] = totalRevenue;
+        stats["paymentRate"] = totalRecords > 0 ? (double)paidRecords / totalRecords : 0.0;
+        stats["paymentMethods"] = paymentMethodStats;
+        stats["period"] = QString("%1 to %2").arg(startTime.toString(Qt::ISODate), endTime.toString(Qt::ISODate));
+        
+        Logger::info(QString("Payment statistics: total=%1, paid=%2, unpaid=%3, paidAmount=%4, unpaidAmount=%5")
+                    .arg(totalRecords).arg(paidRecords).arg(unpaidRecords).arg(paidRevenue).arg(unpaidRevenue));
+        
         return ApiResponse::success(stats);
     } catch (const std::exception& e) {
         Logger::error(QString("Error getting payment stats: %1").arg(e.what()));

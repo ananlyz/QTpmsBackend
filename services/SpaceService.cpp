@@ -292,8 +292,58 @@ QJsonObject SpaceService::getStatistics()
 QJsonObject SpaceService::getUsageStatistics()
 {
     try {
+        // 获取空间使用率统计
+        int totalSpaces = SpaceRepository::instance().count();
+        int occupiedSpaces = SpaceRepository::instance().countByStatus(ParkingSpace::OCCUPIED);
+        int availableSpaces = SpaceRepository::instance().countByStatus(ParkingSpace::AVAILABLE);
+        
+        // 获取停车记录来计算实际使用率
+        QList<ParkingRecord> allRecords = ParkingRecordRepository::instance().findAll();
+        QDateTime now = QDateTime::currentDateTime();
+        QDateTime todayStart = QDateTime(now.date(), QTime(0, 0, 0));
+        QDateTime todayEnd = QDateTime(now.date(), QTime(23, 59, 59));
+        
+        int todayParkings = 0;
+        int activeParkings = 0;
+        qint64 totalUsageSeconds = 0;
+        
+        for (const ParkingRecord& record : allRecords) {
+            // 今日停车统计
+            if (record.getEnterTime() >= todayStart && record.getEnterTime() <= todayEnd) {
+                todayParkings++;
+            }
+            
+            // 活跃停车统计
+            if (record.getExitTime().isNull() || record.getExitTime() > now) {
+                activeParkings++;
+            }
+            
+            // 计算总使用时长
+            QDateTime startTime = record.getEnterTime();
+            QDateTime endTime = record.getExitTime().isValid() ? record.getExitTime() : now;
+            if (endTime > startTime) {
+                totalUsageSeconds += startTime.secsTo(endTime);
+            }
+        }
+        
+        double avgUsageHoursPerSpace = totalSpaces > 0 ? (double)totalUsageSeconds / totalSpaces / 3600.0 : 0.0;
+        double currentUsageRate = totalSpaces > 0 ? (double)occupiedSpaces / totalSpaces : 0.0;
+        double dailyTurnoverRate = totalSpaces > 0 ? (double)todayParkings / totalSpaces : 0.0;
+        
         QJsonObject stats;
-        stats["usageRate"] = 0.0; // TODO
+        stats["totalSpaces"] = totalSpaces;
+        stats["occupiedSpaces"] = occupiedSpaces;
+        stats["availableSpaces"] = availableSpaces;
+        stats["currentUsageRate"] = currentUsageRate;
+        stats["todayParkings"] = todayParkings;
+        stats["activeParkings"] = activeParkings;
+        stats["avgUsageHoursPerSpace"] = avgUsageHoursPerSpace;
+        stats["dailyTurnoverRate"] = dailyTurnoverRate;
+        stats["reportTime"] = now.toString(Qt::ISODate);
+        
+        Logger::info(QString("Space usage statistics: total=%1, occupied=%2, rate=%3%, todayParkings=%4")
+                    .arg(totalSpaces).arg(occupiedSpaces).arg(currentUsageRate * 100).arg(todayParkings));
+        
         return ApiResponse::success(stats);
     } catch (const std::exception& e) {
         Logger::error(QString("Error getting usage stats: %1").arg(e.what()));

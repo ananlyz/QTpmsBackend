@@ -298,6 +298,88 @@ QSqlDatabase ParkingRecordRepository::getDatabase()
     if (!db.open()) {
         Logger::error("Failed to open database:" + db.lastError().text());
         return QSqlDatabase();
-    }
+}
     return db;
+}
+
+int ParkingRecordRepository::countByDateRange(const QDateTime& startTime, const QDateTime& endTime)
+{
+    QSqlDatabase db = getDatabase();
+    if (!db.isOpen()) {
+        Logger::error("Database connection is not open");
+        return 0;
+    }
+    QSqlQuery query(db);
+    query.prepare("SELECT COUNT(*) FROM parking_records WHERE enter_time >= ? AND enter_time <= ?");
+    query.addBindValue(startTime);
+    query.addBindValue(endTime);
+    if (query.exec() && query.next()) {
+        int result = query.value(0).toInt();
+        QSqlDatabase::removeDatabase(db.connectionName());
+        return result;
+    }
+    QSqlDatabase::removeDatabase(db.connectionName());
+    return 0;
+}
+
+double ParkingRecordRepository::sumRevenueByDateRange(const QDateTime& startTime, const QDateTime& endTime)
+{
+    QSqlDatabase db = getDatabase();
+    if (!db.isOpen()) {
+        Logger::error("Database connection is not open");
+        return 0.0;
+    }
+    QSqlQuery query(db);
+    query.prepare("SELECT SUM(fee) FROM parking_records WHERE enter_time >= ? AND enter_time <= ? AND is_paid = 1");
+    query.addBindValue(startTime);
+    query.addBindValue(endTime);
+    if (query.exec() && query.next()) {
+        double result = query.value(0).toDouble();
+        QSqlDatabase::removeDatabase(db.connectionName());
+        return result;
+    }
+    QSqlDatabase::removeDatabase(db.connectionName());
+    return 0.0;
+}
+
+int ParkingRecordRepository::countByPaymentStatus(bool isPaid, const QDateTime& startTime, const QDateTime& endTime)
+{
+    QSqlDatabase db = getDatabase();
+    if (!db.isOpen()) {
+        Logger::error("Database connection is not open");
+        return 0;
+    }
+    QSqlQuery query(db);
+    query.prepare("SELECT COUNT(*) FROM parking_records WHERE is_paid = ? AND enter_time >= ? AND enter_time <= ?");
+    query.addBindValue(isPaid);
+    query.addBindValue(startTime);
+    query.addBindValue(endTime);
+    if (query.exec() && query.next()) {
+        int result = query.value(0).toInt();
+        QSqlDatabase::removeDatabase(db.connectionName());
+        return result;
+    }
+    QSqlDatabase::removeDatabase(db.connectionName());
+    return 0;
+}
+
+double ParkingRecordRepository::sumRevenueByPaymentStatus(bool isPaid, const QDateTime& startTime, const QDateTime& endTime)
+{
+    QSqlDatabase db = getDatabase();
+    if (!db.isOpen()) {
+        Logger::error("Database connection is not open");
+        return 0.0;
+    }
+    QSqlQuery query(db);
+    query.prepare("SELECT SUM(fee) FROM parking_records WHERE is_paid = ? AND enter_time >= ? AND enter_time <= ?");
+    query.addBindValue(isPaid);
+    query.addBindValue(startTime);
+    query.addBindValue(endTime);
+    if (query.exec() && query.next()) {
+        double result = query.value(0).toDouble();
+        QSqlDatabase::removeDatabase(db.connectionName());
+        return result;
+    }
+    QSqlDatabase::removeDatabase(db.connectionName());
+    return 0.0;
 }
